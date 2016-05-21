@@ -52,13 +52,13 @@ def test_syslog_qfx_influx_01():
 def teardown_module(module):
     global c
 
-    # if not os.getenv('TRAVIS'):
-    #     open_nti_input_syslog_lib.stop_fluentd()
-    #     open_nti_input_syslog_lib.stop_open_nti()
-    #
-    #     try:
-    #         old_container_id = c.inspect_container(TCP_RELAY_CONTAINER_NAME)['Id']
-    #         c.stop(container=old_container_id)
-    #         c.remove_container(container=old_container_id)
-    #     except:
-    #         print "Container do not exit"
+    if not os.getenv('TRAVIS'):
+        # open_nti_input_syslog_lib.stop_fluentd()
+        open_nti_input_syslog_lib.stop_open_nti()
+
+        try:
+            old_container_id = c.inspect_container(TCP_RELAY_CONTAINER_NAME)['Id']
+            c.stop(container=old_container_id)
+            c.remove_container(container=old_container_id)
+        except:
+            print "Container do not exit"

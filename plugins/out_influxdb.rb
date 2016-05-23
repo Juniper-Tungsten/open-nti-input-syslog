@@ -16,8 +16,7 @@ class Fluent::InfluxdbOutput < Fluent::BufferedOutput
     config_param :use_ssl, :bool, :default => false
     config_param :tag_keys, :array, :default => []
     config_param :value_keys, :array, :default => []
-    config_param :serie, :string, :default => 'events'
-
+    
     def initialize
         super
     end
@@ -28,7 +27,7 @@ class Fluent::InfluxdbOutput < Fluent::BufferedOutput
                                                   port: @port,
                                                   username: @user,
                                                   password: @password,
-                                                  async: false,
+                                                  async: true,
                                                   time_precision: @time_precision,
                                                   use_ssl: @use_ssl
     end
@@ -57,7 +56,7 @@ class Fluent::InfluxdbOutput < Fluent::BufferedOutput
         chunk.msgpack_each do |tag, time, record|
             point = {}
             point[:timestamp] = record.delete('time') || time
-            point[:series] = @serie
+            point[:series] = tag
 
             if ( tag_keys.empty? && value_keys.empty? )
                 point[:values] = record

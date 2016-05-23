@@ -15,6 +15,8 @@ import time
 import requests
 import filecmp
 import sys
+import socket
+from timeout import timeout
 
 pp = pprint.PrettyPrinter(indent=4)
 
@@ -43,6 +45,8 @@ TESTS_FIXTURES_DIR = TESTS_DIR + "/fixtures"
 DOCKER_IP = '127.0.0.1'
 CONTAINER_ID = ''
 c = ''
+
+EXTERNAL_IP = ''
 
 ## Open NTI container related information
 OPENNTI_CID = ''
@@ -151,10 +155,15 @@ def get_influxdb_handle():
 
     return INFLUXDB_HANDLE
 
+def get_external_ip():
+    return [(s.connect(('8.8.8.8', 53)), s.getsockname()[0], s.close()) for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]
+
 def start_kafka():
     global c
     global KAFKA_CID
     global KAFKA_INTERNAL_IP
+    global KAFKA_BROKER_PORT
+    global KAFKA_API_PORT
 
     # Force Stop and delete existing container if exist
     try:
@@ -169,6 +178,10 @@ def start_kafka():
         image=KAFKA_IMAGE_NAME,
         name=KAFKA_C_NAME,
         detach=True,
+        environment=[
+            "ADVERTISED_PORT="+str(KAFKA_BROKER_PORT),
+            "ADVERTISED_HOST="+str(get_external_ip())
+        ],
         ports=[
             2181,
             9092
@@ -189,6 +202,34 @@ def start_kafka():
     time.sleep(5)
     return KAFKA_CID
 
+def stop_kafka():
+    global c
+    # Force Stop and delete existing container if exist
+    try:
+        old_container_id = c.inspect_container(KAFKA_C_NAME)['Id']
+        c.stop(container=old_container_id)
+        c.remove_container(container=old_container_id)
+    except:
+        print "Container do not exit"
+
+@timeout(5)
+def check_kafka_msg(topic='events', nbr_msg=100):
+
+    ## Collect Messages from Bus
+    consumer = KafkaConsumer(
+        bootstrap_servers=get_external_ip()+':'+str(KAFKA_BROKER_PORT),
+        auto_offset_reset='earliest')
+
+    consumer.subscribe([topic])
+
+    counter = 0
+    for message in consumer:
+        counter = counter + 1
+        if counter == nbr_msg:
+            break
+
+    return counter
+
 def check_influxdb_running_database_exist():
     # Verify we can connect to InfluxDB and DB with a name juniper exists
 
@@ -207,14 +248,10 @@ def check_influxdb_running_database_exist():
 def check_kafka_is_running():
     # Verify we can connect to InfluxDB and DB with a name juniper exists
 
-    consumer = KafkaConsumer(bootstrap_servers='localhost:'+str(KAFKA_BROKER_PORT),
+    consumer = KafkaConsumer(bootstrap_servers=get_external_ip()+':'+str(KAFKA_BROKER_PORT),
                              auto_offset_reset='earliest')
 
     mytopic = consumer.topics()
-
-    #consumer.subscribe(['events'])
-    # for message in consumer:
-    #     print (message)
 
     return 1
 
@@ -243,6 +280,9 @@ def start_fluentd_syslog(output_kafka='false', output_influx='false'):
             "INFLUXDB_PWD=juniper",
             "INFLUXDB_ADDR="+OPENNTI_INTERNAL_IP,
             "INFLUXDB_FLUSH_INTERVAL=1",
+            "KAFKA_ADDR="+str(get_external_ip()),
+            "KAFKA_PORT="+str(KAFKA_BROKER_PORT),
+            "KAFKA_TOPIC=events",
             "OUTPUT_KAFKA="+output_kafka,
             "OUTPUT_INFLUXDB="+output_influx,
             "OUTPUT_STDOUT=true"
@@ -285,7 +325,7 @@ def replay_file(file_name):
 
     container = c.create_container(
         image='dgarros/tcpreplay',
-        command='/usr/bin/tcpreplay --pps=700 --intf1=eth0 /data/' + file_name,
+        command='/usr/bin/tcpreplay --pps=100 --intf1=eth0 /data/' + file_name,
         name=TCP_RELAY_CONTAINER_NAME,
         volumes=[
             '/data'

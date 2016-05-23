@@ -21,6 +21,7 @@ RUN apk --no-cache --update add \
                             ruby-dev && \
     echo 'gem: --no-document' >> /etc/gemrc && \
     gem install --no-ri --no-rdoc \
+              ruby-kafka yajl ltsv zookeeper \
               influxdb \
               fluent-plugin-kafka \
               bigdecimal && \
@@ -35,8 +36,8 @@ RUN     chmod 777 fluentd-alpine.start.sh
 USER fluent
 
 RUN   gem install --no-ri --no-rdoc fluent-plugin-newsyslog
-
-EXPOSE 24284
+RUN   gem install --no-ri --no-rdoc fluent-plugin-rewrite-tag-filter
+EXPOSE 24220
 
 ENV OUTPUT_KAFKA=false \
     OUTPUT_INFLUXDB=false \
@@ -48,10 +49,13 @@ ENV OUTPUT_KAFKA=false \
     INFLUXDB_DB=juniper \
     INFLUXDB_USER=juniper \
     INFLUXDB_PWD=juniper \
-    INFLUXDB_FLUSH_INTERVAL=2 \
+    INFLUXDB_FLUSH_INTERVAL=5s \
+    INFLUXDB_NUM_THREADS=2 \
+    INFLUXDB_QUEUE_LIMIT=2048 \
+    INFLUXDB_CHUNK_LIMIT=100m \
     KAFKA_ADDR=localhost \
     KAFKA_PORT=9092 \
     KAFKA_DATA_TYPE=json \
-    KAFKA_TOPIC=jnpr.jvision
+    KAFKA_TOPIC=events
 
 CMD /home/fluent/fluentd-alpine.start.sh

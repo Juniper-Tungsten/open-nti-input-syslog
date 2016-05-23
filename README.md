@@ -41,18 +41,28 @@ Here is the list of variables available with their default value.
   KAFKA_DATA_TYPE: json
   KAFKA_TOPIC: events
 ```
+> For latest list of environment variables please refer to Dockerfile
 
 Here is an example to define an environment variable
 ```
 docker run -d -e INFLUXDB_ADDR: 'localhost' -i juniper/open-nti-input-syslog
 ```
 
-## Docker Compose
+## Build and Tests
 
-> The Load Balancer is not yet part of the docker-compose file
-> For now, it's recommended to use https://hub.docker.com/r/eslam/pen/
-
-To start
+The project include few tests to ensure that everything is working as expected
+You can run all tests with
 ```
-docker-compose up -d
+pip install -r requirements.txt
+python -m pytest -v
+```
+>To run these tests additional containers will be downloaded
+
+In addition, all tests are executed on Travis after each commit.
+
+Inside the test directory there are some packet captures that can be use to generate traffic
+You can play them using tcpreplay.
+```
+cd tests/fixtures/test_syslog_qfx_01
+docker run --rm -t -v $(pwd):/data -i dgarros/tcpreplay /usr/bin/tcpreplay --pps=10 --intf1=eth0 syslog_qfx_01_16000.pcap
 ```

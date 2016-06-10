@@ -25,4 +25,4 @@ for message in consumer:
         if msg['event'] and msg['event'] == args.event:
             print (msg)
     else:
-        print (msg)
+        print message

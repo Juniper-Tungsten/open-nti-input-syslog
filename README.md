@@ -1,4 +1,6 @@
-![status beta](https://img.shields.io/badge/status-beta-yellow.svg)  
+![Beta](https://img.shields.io/badge/status-beta-yellowgreen.svg?style=flat "Beta")
+![Community](https://img.shields.io/badge/support-community-blue.svg?style=flat "Community")
+
 # open-nti-input-syslog
 Standalone container running fluentd to parse syslog
 
